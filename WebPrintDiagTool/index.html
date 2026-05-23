@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プリンタ印刷遅延調査ツール</title>
+    <!-- Tailwind CSS (スタイリング用) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans p-4 md:p-8">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+        
+        <!-- ヘッダー -->
+        <div class="bg-blue-600 text-white px-6 py-4">
+            <h1 class="text-2xl font-bold">プリンタ印刷遅延調査ツール</h1>
+            <p class="text-sm opacity-80 mt-1">サポート窓口へ提出するための一次切り分けレポートを作成します。</p>
+        </div>
+
+        <div class="p-6 space-y-8">
+            
+            <!-- Step 1: 簡易問診 -->
+            <section>
+                <h2 class="text-lg font-semibold border-b pb-2 mb-4 text-blue-800 flex items-center">
+                    <span class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">1</span>
+                    事象についての問診
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">発生頻度</label>
+                        <select id="q_frequency" class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">選択してください...</option>
+                            <option value="常に遅い">常に遅い</option>
+                            <option value="時々遅い">時々遅い</option>
+                            <option value="今日から遅い">今日から遅い</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">遅延の程度</label>
+                        <select id="q_severity" class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">選択してください...</option>
+                            <option value="数秒">数秒</option>
+                            <option value="数十秒">数十秒</option>
+                            <option value="1分以上">1分以上</option>
+                            <option value="フリーズする">フリーズする</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">特定のアプリか</label>
+                        <select id="q_app" class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">選択してください...</option>
+                            <option value="ブラウザのみ">ブラウザのみ</option>
+                            <option value="Word・Excel等も遅い">Word・Excel等も遅い</option>
+                            <option value="わからない">わからない</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">特定のプリンタか</label>
+                        <select id="q_printer" class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">選択してください...</option>
+                            <option value="オフィスの複合機">オフィスの複合機</option>
+                            <option value="自宅のプリンタ">自宅のプリンタ</option>
+                            <option value="PDF出力等すべて">PDF出力等すべて</option>
+                            <option value="わからない">わからない</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">VPNの利用</label>
+                        <select id="q_vpn" class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">選択してください...</option>
+                            <option value="利用している">利用している</option>
+                            <option value="利用していない">利用していない</option>
+                            <option value="わからない">わからない</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2 & 3: テスト実行 -->
+            <section>
+                <h2 class="text-lg font-semibold border-b pb-2 mb-4 text-blue-800 flex items-center">
+                    <span class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
+                    印刷ダイアログの表示テスト
+                </h2>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4 text-sm text-yellow-800">
+                    <p class="font-bold mb-1">【操作手順】</p>
+                    <ol class="list-decimal pl-5 space-y-1">
+                        <li>下の「印刷テストを開始する」ボタンを押してください。</li>
+                        <li>印刷ダイアログ（プリンタ選択画面）が表示されるのをお待ちください。</li>
+                        <li><strong>ダイアログが表示されたら、印刷はせずに「キャンセル」を押して閉じてください。</strong></li>
+                    </ol>
+                    <p class="text-red-600 mt-2 font-bold">※プレビュー画面など、一部の環境ではセキュリティ制限によりボタンが反応しない場合があります。その場合はファイルをPCに保存（ダウンロード）してから、ブラウザで開いて実行してください。</p>
+                </div>
+
+                <div class="text-center py-4">
+                    <button id="btnStartTest" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded shadow transition-colors">
+                        印刷テストを開始する
+                    </button>
+                    <p id="printErrorMsg" class="text-red-500 text-sm mt-2 hidden">ダイアログを呼び出せませんでした。ローカルPCに保存してから実行してください。</p>
+                </div>
+
+                <!-- テスト結果入力（テスト後に表示） -->
+                <div id="testResultArea" class="hidden bg-gray-50 border p-4 rounded-md mt-4 text-sm">
+                    <p class="text-green-600 font-bold mb-2">✓ 印刷ダイアログテストが完了しました。</p>
+                    <p class="mb-2">システムでの自動計測時間は <span id="autoMeasuredTime" class="font-bold text-lg">0</span> 秒でした。</p>
+                    <label class="block font-medium text-gray-700 mb-1 mt-4">ダイアログが表示されるまでの「実際の体感時間」を教えてください：</label>
+                    <select id="q_user_time" class="w-full md:w-1/2 border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">選択してください...</option>
+                        <option value="すぐに表示された（3秒以内）">すぐに表示された（3秒以内）</option>
+                        <option value="少し待った（5〜10秒程度）">少し待った（5〜10秒程度）</option>
+                        <option value="長く待った（20秒以上）">長く待った（20秒以上）</option>
+                        <option value="1分以上待った・固まった">1分以上待った・固まった</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Step 4: レポート生成 -->
+            <section>
+                <h2 class="text-lg font-semibold border-b pb-2 mb-4 text-blue-800 flex items-center">
+                    <span class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">3</span>
+                    レポートの出力
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">問診とテストが完了したら、以下のボタンからレポート（テキストファイル）をダウンロードし、サポート窓口へ送付してください。</p>
+                <div class="text-center">
+                    <button id="btnDownload" disabled class="bg-gray-300 text-gray-500 font-bold py-3 px-8 rounded cursor-not-allowed transition-colors">
+                        レポートをダウンロード
+                    </button>
+                    <p id="downloadHelp" class="text-xs text-red-500 mt-2">※すべての問診項目とテストを完了してください。</p>
+                    <p id="downloadSuccessMsg" class="text-sm text-green-600 font-bold mt-2 hidden">✓ レポートをダウンロードしました。サポート窓口へご提供ください。</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 状態管理 ---
+        let testStartTime = 0;
+        let testDurationSec = 0;
+        let isTesting = false;
+
+        // --- DOM要素 ---
+        const btnStartTest = document.getElementById('btnStartTest');
+        const testResultArea = document.getElementById('testResultArea');
+        const autoMeasuredTimeSpan = document.getElementById('autoMeasuredTime');
+        const btnDownload = document.getElementById('btnDownload');
+        const downloadHelp = document.getElementById('downloadHelp');
+        
+        // フォーム要素群
+        const formElements = [
+            document.getElementById('q_frequency'),
+            document.getElementById('q_severity'),
+            document.getElementById('q_app'),
+            document.getElementById('q_printer'),
+            document.getElementById('q_vpn'),
+            document.getElementById('q_user_time')
+        ];
+
+        // --- 入力状態の監視（ダウンロードボタンの有効化） ---
+        function checkCompletion() {
+            // すべてのセレクトボックスが選択されているか確認
+            const allAnswered = formElements.every(el => el.value !== "");
+            
+            if (allAnswered) {
+                btnDownload.disabled = false;
+                btnDownload.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btnDownload.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'shadow');
+                downloadHelp.classList.add('hidden');
+            } else {
+                btnDownload.disabled = true;
+                btnDownload.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                btnDownload.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'shadow');
+                downloadHelp.classList.remove('hidden');
+            }
+        }
+
+        formElements.forEach(el => {
+            if(el) el.addEventListener('change', checkCompletion);
+        });
+
+
+        // --- 印刷テスト処理 ---
+        btnStartTest.addEventListener('click', () => {
+            isTesting = true;
+            testResultArea.classList.add('hidden'); // 再実行時は一旦隠す
+            document.getElementById('printErrorMsg').classList.add('hidden');
+            
+            const originalText = btnStartTest.innerText;
+            btnStartTest.innerText = 'テスト実行中...';
+            btnStartTest.disabled = true;
+            btnStartTest.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // UI更新のための少しの遅延後に印刷ダイアログを呼び出す
+            setTimeout(() => {
+                testStartTime = performance.now();
+                try {
+                    window.print(); 
+                } catch(e) {
+                    console.error("Print call failed:", e);
+                }
+                // Chrome等の仕様により、通常ダイアログ表示中はJavaScriptの実行がブロックされる
+
+                // プレビュー環境等でダイアログが開かず、JSがブロックされなかった場合のタイムアウト処理
+                setTimeout(() => {
+                    if (isTesting) {
+                        btnStartTest.innerText = '印刷テストを再実行する';
+                        btnStartTest.disabled = false;
+                        btnStartTest.classList.remove('opacity-50', 'cursor-not-allowed');
+                        document.getElementById('printErrorMsg').classList.remove('hidden');
+                        isTesting = false;
+                    }
+                }, 3000); 
+
+            }, 100);
+        });
+
+        // 印刷完了またはキャンセル時のイベント（ダイアログが閉じたタイミング）
+        window.addEventListener('afterprint', () => {
+            if (isTesting) {
+                const endTime = performance.now();
+                testDurationSec = Math.max(0, Math.round((endTime - testStartTime) / 1000));
+                
+                btnStartTest.innerText = '印刷テストを再実行する';
+                btnStartTest.disabled = false;
+                btnStartTest.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                // 結果表示
+                autoMeasuredTimeSpan.textContent = testDurationSec;
+                testResultArea.classList.remove('hidden');
+                isTesting = false;
+                
+                checkCompletion();
+            }
+        });
+
+
+        // --- レポート生成とダウンロード処理 ---
+        btnDownload.addEventListener('click', () => {
+            // 1. 日時
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            const fileDateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+
+            // 2. ネットワーク環境情報取得
+            const isOnline = navigator.onLine ? "Online" : "Offline";
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const effType = connection ? connection.effectiveType : "不明";
+            const rtt = connection ? `${connection.rtt}ms` : "不明";
+            const userAgent = navigator.userAgent;
+
+            // 3. レポートテキスト構築
+            const reportText = `========================================
+プリンタ印刷遅延調査 一次レポート
+日時: ${dateStr}
+========================================
+[1. ユーザー申告]
+- 発生頻度: ${formElements[0].value}
+- 遅延の程度: ${formElements[1].value}
+- 該当アプリ: ${formElements[2].value}
+- 該当プリンタ: ${formElements[3].value}
+- VPN利用: ${formElements[4].value}
+
+[2. 簡易ネットワーク状態]
+- 状態: ${isOnline}
+- 接続タイプ推定: ${effType}
+- RTT推定値: ${rtt}
+- UserAgent: ${userAgent}
+
+[3. ブラウザからの印刷テスト結果]
+- 実行結果: 完了
+- 自動計測時間: 約 ${testDurationSec} 秒
+- ユーザー体感時間: ${formElements[5].value}
+========================================`;
+
+            // 4. ダウンロード処理
+            const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `PrintDiagReport_${fileDateStr}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // クリーンアップ
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('downloadSuccessMsg').classList.remove('hidden');
+        });
+
+    </script>
+</body>
+</html>
