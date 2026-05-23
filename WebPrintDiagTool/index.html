@@ -76,7 +76,7 @@
                 </div>
             </section>
 
-            <!-- Step 2 & 3: テスト実行 -->
+            <!-- Step 2: テスト実行 -->
             <section>
                 <h2 class="text-lg font-semibold border-b pb-2 mb-4 text-blue-800 flex items-center">
                     <span class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
@@ -115,19 +115,43 @@
                 </div>
             </section>
 
-            <!-- Step 4: レポート生成 -->
+            <!-- Step 3: レポート生成 -->
             <section>
                 <h2 class="text-lg font-semibold border-b pb-2 mb-4 text-blue-800 flex items-center">
                     <span class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">3</span>
-                    レポートの出力
+                    簡易レポートの出力
                 </h2>
                 <p class="text-sm text-gray-600 mb-4">問診とテストが完了したら、以下のボタンからレポート（テキストファイル）をダウンロードし、サポート窓口へ送付してください。</p>
                 <div class="text-center">
                     <button id="btnDownload" disabled class="bg-gray-300 text-gray-500 font-bold py-3 px-8 rounded cursor-not-allowed transition-colors">
-                        レポートをダウンロード
+                        簡易レポートをダウンロード
                     </button>
                     <p id="downloadHelp" class="text-xs text-red-500 mt-2">※すべての問診項目とテストを完了してください。</p>
                     <p id="downloadSuccessMsg" class="text-sm text-green-600 font-bold mt-2 hidden">✓ レポートをダウンロードしました。サポート窓口へご提供ください。</p>
+                </div>
+            </section>
+
+            <!-- Step 4: 詳細調査ツール (追加機能) -->
+            <section>
+                <h2 class="text-lg font-semibold border-b pb-2 mb-4 text-indigo-800 flex items-center">
+                    <span class="bg-indigo-100 text-indigo-800 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">4</span>
+                    詳細調査ツールのダウンロード（高度な調査用）
+                </h2>
+                <div class="bg-gray-100 border rounded-md p-4 mb-4 text-sm text-gray-800">
+                    <p class="mb-2">簡易レポートだけでは原因が特定できない場合や、サポート窓口から指示があった場合は、以下のツールをダウンロードしてPC上で実行してください。</p>
+                    <p class="font-bold mb-1 mt-3">【実行手順】</p>
+                    <ol class="list-decimal pl-5 space-y-1">
+                        <li>下のボタンを押し、ツールをダウンロードします。</li>
+                        <li>ダウンロードされた <span class="font-mono bg-white px-1 border border-gray-300 rounded shadow-sm">PrintDiagTool.ps1</span> を右クリックします。</li>
+                        <li>メニューから<strong>「PowerShell で実行」</strong>を選択します。（※実行には管理者権限が必要です）</li>
+                        <li>画面の指示に従うとZIPファイルが作成されます。そのZIPファイルをサポート窓口へご提供ください。</li>
+                    </ol>
+                </div>
+                <div class="text-center py-2">
+                    <button id="btnDownloadPS" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded shadow transition-colors">
+                        詳細調査ツール (.ps1) をダウンロード
+                    </button>
+                    <p id="downloadPSSuccessMsg" class="text-sm text-green-600 font-bold mt-2 hidden">✓ ツールをダウンロードしました。手順に従って実行してください。</p>
                 </div>
             </section>
 
@@ -288,6 +312,163 @@
             URL.revokeObjectURL(url);
             
             document.getElementById('downloadSuccessMsg').classList.remove('hidden');
+        });
+
+        // --- 詳細調査ツール (PowerShell) のダウンロード処理 ---
+        const btnDownloadPS = document.getElementById('btnDownloadPS');
+        const psScriptContent = `<#
+.SYNOPSIS
+プリンタ印刷ダイアログ遅延調査ツール
+.DESCRIPTION
+仕様書に基づき、イベントログ、レジストリ、環境情報(プリンタ設定、ネットワーク、スプーラ状態)を収集し、ZIPファイルに圧縮します。
+#>
+
+# 1. 管理者権限での実行チェック
+\$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not \$isAdmin) {
+    Write-Warning "管理者権限が必要です。スクリプトを右クリックし「管理者として実行」を選択するか、管理者権限のPowerShellから実行してください。"
+    Pause
+    exit
+}
+
+# 変数定義・作業用フォルダ作成
+\$HostName = \$env:COMPUTERNAME
+\$TimeStamp = Get-Date -Format "yyyyMMdd_HHmmss"
+\$OutDirName = "PrintDiag_\${HostName}_\${TimeStamp}"
+# 実行したディレクトリにフォルダを作成
+\$OutDirPath = Join-Path -Path \$PWD -ChildPath \$OutDirName
+\$ZipFilePath = Join-Path -Path \$PWD -ChildPath "\${OutDirName}.zip"
+
+New-Item -ItemType Directory -Force -Path \$OutDirPath | Out-Null
+Write-Host "調査ログの収集を開始します。しばらくお待ちください..." -ForegroundColor Cyan
+Write-Host "作業フォルダ: \$OutDirPath"
+
+# ==========================================
+# 3.1. イベントログの取得 (過去7日間)
+# ==========================================
+Write-Host "[1/3] イベントログを収集しています..."
+\$StartTime = (Get-Date).AddDays(-7)
+
+# PrintService (Admin / Operational)
+try {
+    Get-WinEvent -LogName "Microsoft-Windows-PrintService/Admin","Microsoft-Windows-PrintService/Operational" -ErrorAction Stop |
+    Where-Object { \$_.TimeCreated -ge \$StartTime } |
+    Select-Object TimeCreated, Id, LevelDisplayName, Message |
+    Export-Csv -Path (Join-Path \$OutDirPath "EventLog_PrintService.csv") -NoTypeInformation -Encoding UTF8
+} catch {
+    Write-Warning " - PrintServiceのイベントログが存在しないか、取得できませんでした。"
+}
+
+# System (Spooler関連のみ抽出)
+try {
+    Get-WinEvent -FilterHashtable @{LogName='System'; StartTime=\$StartTime} -ErrorAction Stop |
+    Where-Object { \$_.ProviderName -match "Print|Spooler" } |
+    Select-Object TimeCreated, Id, LevelDisplayName, Message |
+    Export-Csv -Path (Join-Path \$OutDirPath "EventLog_System_Spooler.csv") -NoTypeInformation -Encoding UTF8
+} catch { }
+
+# Application (フリーズやクラッシュ関連)
+try {
+    Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=\$StartTime; Level=1,2,3} -ErrorAction Stop |
+    Where-Object { \$_.Message -match "print|spool" } |
+    Select-Object TimeCreated, Id, ProviderName, Message |
+    Export-Csv -Path (Join-Path \$OutDirPath "EventLog_Application_Errors.csv") -NoTypeInformation -Encoding UTF8
+} catch { }
+
+
+# ==========================================
+# 3.2. レジストリの取得
+# ==========================================
+Write-Host "[2/3] レジストリ情報を収集しています..."
+\$RegKeys = @(
+    "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+    "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\PrinterPorts",
+    "HKCU\\Printers\\Connections",
+    "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Print\\Printers",
+    "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Print\\Environments"
+)
+
+foreach (\$key in \$RegKeys) {
+    # ファイル名として使用できない文字を置換
+    \$safeKeyName = \$key -replace '\\\\', '_' -replace ':', ''
+    \$outFile = Join-Path \$OutDirPath "Registry_\${safeKeyName}.txt"
+    # reg export コマンドを使用してテキスト出力
+    cmd.exe /c "reg export \`"\$key\`" \`"\$outFile\`" /y > nul 2>&1"
+}
+
+
+# ==========================================
+# 3.3. 環境情報の取得
+# ==========================================
+Write-Host "[3/3] PCの環境情報を収集しています..."
+
+# OS情報
+systeminfo > (Join-Path \$OutDirPath "Env_SystemInfo.txt")
+
+# プリンタ構成情報
+try {
+    Get-Printer | Select-Object Name, ComputerName, Type, DriverName, PortName, Shared, Published, PrinterStatus | Export-Csv -Path (Join-Path \$OutDirPath "Env_Printers.csv") -NoTypeInformation -Encoding UTF8
+    Get-PrinterDriver | Select-Object Name, PrinterEnvironment, MajorVersion | Export-Csv -Path (Join-Path \$OutDirPath "Env_PrinterDrivers.csv") -NoTypeInformation -Encoding UTF8
+    Get-PrinterPort | Select-Object Name, Description, PrinterHostAddress, PortNumber | Export-Csv -Path (Join-Path \$OutDirPath "Env_PrinterPorts.csv") -NoTypeInformation -Encoding UTF8
+} catch {
+    Write-Warning " - プリンタ構成情報の取得に失敗しました。"
+}
+
+# ネットワーク情報
+ipconfig /all > (Join-Path \$OutDirPath "Env_Ipconfig.txt")
+netstat -ano > (Join-Path \$OutDirPath "Env_Netstat.txt")
+
+# プロセス情報 (spoolsv.exe)
+Get-Process -Name spoolsv -ErrorAction SilentlyContinue | Select-Object Name, Id, CPU, WorkingSet, StartTime | Export-Csv -Path (Join-Path \$OutDirPath "Env_Process_Spoolsv.csv") -NoTypeInformation -Encoding UTF8
+
+# スプーラフォルダの状態
+\$SpoolDir = "C:\\Windows\\System32\\spool\\PRINTERS"
+if (Test-Path \$SpoolDir) {
+    \$SpoolFiles = Get-ChildItem -Path \$SpoolDir -File
+    \$count = 0
+    if (\$SpoolFiles) {
+        \$count = (\$SpoolFiles | Measure-Object).Count
+        \$SpoolFiles | Select-Object Name, Length, LastWriteTime | Export-Csv -Path (Join-Path \$OutDirPath "Env_SpoolFiles_List.csv") -NoTypeInformation -Encoding UTF8
+    }
+    "スプーラフォルダ (\$SpoolDir) 内の滞留ファイル数: \$count 件" | Out-File -FilePath (Join-Path \$OutDirPath "Env_SpoolFileCount.txt") -Encoding UTF8
+}
+
+
+# ==========================================
+# 4. アーカイブ化 (ZIP圧縮) と後処理
+# ==========================================
+Write-Host "収集したデータをZIPに圧縮しています..."
+Compress-Archive -Path "\$OutDirPath\\*" -DestinationPath \$ZipFilePath -Force
+
+# 圧縮完了後、作業用フォルダを削除
+Remove-Item -Path \$OutDirPath -Recurse -Force
+
+Write-Host ""
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host " 調査ログの取得が完了しました。" -ForegroundColor Green
+Write-Host " 以下のZIPファイルをサポート窓口へご提供ください。" -ForegroundColor Green
+Write-Host " 出力先: \$ZipFilePath" -ForegroundColor Yellow
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host ""
+Pause
+`;
+
+        btnDownloadPS.addEventListener('click', () => {
+            // 文字化け防止のためBOM (Byte Order Mark) を付与してUTF-8としてBlobを作成
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const blob = new Blob([bom, psScriptContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `PrintDiagTool.ps1`;
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            document.getElementById('downloadPSSuccessMsg').classList.remove('hidden');
         });
 
     </script>
